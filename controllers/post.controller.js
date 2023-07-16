@@ -1,6 +1,7 @@
 const { response } = require("../app.js");
 const Contact = require("../models/contact.js");
 const _ = require('lodash')
+const utils = require('../utils/util')
 
 let ctrl = {
 
@@ -40,7 +41,7 @@ let ctrl = {
                         else {
                             const data = {
                                 "contact": {
-                                    "primaryContatctId":doc.id,
+                                    "primaryContactId":doc.id,
                                     "emails": [doc.email],
                                     "phoneNumbers": [doc.phone],
                                     "secondaryContactIds": []
@@ -50,80 +51,130 @@ let ctrl = {
                     });
                 }
                 else {
-    
-                    var prim1 = _.filter(result,(doc)=> doc.linkPrecedend=='primary') || [];
-    
-                    var secId = _.filter(result,(doc)=> doc.linkPrecedend=='secondary') || [];
-                    console.log('prim sec', prim1, secId);
-                    
-                    if(secId.length){
-                        var prim2 = [];
-                        _.forEach(secId,(doc)=>{
-                            Contact.findById(doc.linkedId,(err,doc)=>{
-                                if(err)throw err;
-                                prim2.push(doc);
-                            });
-                        })
-                        _.concat(prim1, prim2);
+                    var emailMatch =  _.filter(result,(doc)=> email && doc.email==email) || [];
+                    var phoneMatch =  _.filter(result,(doc)=> phone && doc.phone==phone) || [];
+
+                    var prim1 = utils.findPrimary(emailMatch);
+                    var prim2 = utils.findPrimary(phoneMatch);
+                    var emails = _.map(result,'email') || [];
+                    var phoneNumbers = _.map(result,'phone') || [];
+                    var primaryContactId;
+                    var secondaryContactIds = _.map(result,(doc)=>{
+                        if(doc.linkPrecedend=='secondary')return doc.id;
+                    }) || [];
+
+                    if(prim1==prim2  && prim1){
+                        primaryContactId = prim1.id;
+                        emails.push(prim1.email);
+                        phoneNumbers.push(prim1.phone);
+
                     }
-                    const primContact = _.minBy(prim1,'createdAt');
-                    var newSecondary = _.find(prim1, (doc)=> doc.id != primContact.id)
-                    console.log('111', primContact, newSecondary);
-                    var emails = [primContact.email];
-                    var phoneNumbers = [primContact.phone];
-                    var secondaryContactIds = [];
-                    if(newSecondary){
-                        newSecondary.linkPrecedend = 'secondary';
-                        newSecondary.linkedId = primContact.id;
-                        newSecondary.updatedAt = new Date();
-                        Contact.updateById(newSecondary.id,newSecondary, (err,res) => {
-                            if(err) throw err;
-                            secondaryContactIds.push(res.id);
-                            emails.push(res.email);
-                            phoneNumbers.push(res.phone);
-                            Contact.updateChildSecIds(newSecondary, (err, res) => {
-                                if(err) throw err;
-                                _.concat(secondaryContactIds,_.map(res,'id'));
-                                _.concat(emails,_.map(res,'email'));
-                                _.concat(phoneNumbers,_.map(res,'phone'));
+                    else if(prim1 != prim2 && prim1 && prim2){
+                        let primaryId = _.minBy([prim1,prim2],'createdAt');
+                        primaryContactId=primaryId.id;
+                        if(prim1==primaryId){
+                            Contact.updateSecToPrimById(prim2.id,prim1.id,(err,result)=>{
+                                if(err)throw err;
+                                emails = _.concat(email,_.map(result,'email'));
+                                phoneNumbers = _.concat(phoneNumbers,_.map(result,'phone'))
+                                secondaryContactIds = _.concat(secondaryContactIds,_.map(result,'id'))
+
                             });
-                            
-                        });
+                            // update secondarycontactids,emails,phone
+                        }
+                        else {
+                            Contact.updateSecToPrimById(prim1.id,prim2.id,(err,result)=>{
+                                if(err)throw err;
+                                emails = _.concat(email,_.map(result,'email'));
+                                phoneNumbers = _.concat(phoneNumbers,_.map(result,'phone'))
+                                secondaryContactIds = _.concat(secondaryContactIds,_.map(result,'id'))
+                            });
+                            // update secondarycontactids,emails,phone
+                        }
                     }
                     else {
-                        newSecondary = {
-                            email: email,
-                            phone: phone,
-                            linkedId:primContact.id,
-                            linkPrecedend:'secondary',
-                            createdAt:new Date(),
-                            updatedAt:new Date(),
-                        }
-                        Contact.create(newSecondary, (err, doc) => {
-                            if (err)
-                                res.status(500).send({
-                                message:
-                                    err.message || "Some error occurred while creating the Contact."
+                        
+                        if(!prim2){
+                            if(!phone){
+                                Contact.getByParent(prim1.id,(err,result)=>{
+                                    if(err)throw err;
+                                    primaryContactId = prim1.id;
+                                    emails = _.concat(email,_.map(result,'email'));
+                                    phoneNumbers = _.concat(phoneNumbers,_.map(result,'phone'))
+                                    secondaryContactIds = _.concat(secondaryContactIds,_.map(result,'id'))
                                 });
-                            else {
-                                emails.push(doc.email);
-                                phoneNumbers.push(doc.phone);
-                                secondaryContactIds.push(doc.id);
+
                             }
-                        });
-                    }
-                    
-                    const data = {
-                        "contact": {
-                            "primaryContatctId":primContact.id,
-                            "emails": emails,
-                            "phoneNumbers": phoneNumbers,
-                            "secondaryContactIds": secondaryContactIds
+                            else {
+                                const contact = new Contact({
+                                    email: email,
+                                    phone: phone,
+                                    linkedId:prim1.id,
+                                    linkPrecedend:'secondary',
+                                    createdAt:new Date(),
+                                    updatedAt:new Date(),
+                                    // deletedAt:new Date(),
+                                  });
+                                  Contact.create(contact, (err, doc) => {
+                                    if (err){
+                                        console.log('err',err);
+                                    }
+                                });
+                                Contact.getByParent(prim1.id,(err,result)=>{
+                                    if(err)throw err;
+                                    primaryContactId = prim1.id;
+                                    emails = _.concat(email,_.map(result,'email'));
+                                    phoneNumbers = _.concat(phoneNumbers,_.map(result,'phone'))
+                                    secondaryContactIds = _.concat(secondaryContactIds,_.map(result,'id'))
+                                });
+
+                            }
                         }
+                        else if(!prim1){
+                            if(!email){
+                                Contact.getByParent(prim2.id,(err,result)=>{
+                                    if(err)throw err;
+                                    primaryContactId = prim2.id;
+                                    emails = _.concat(email,_.map(result,'email'));
+                                    phoneNumbers = _.concat(phoneNumbers,_.map(result,'phone'))
+                                    secondaryContactIds = _.concat(secondaryContactIds,_.map(result,'id'))
+                                });
+                            }
+                            else {
+                                const contact = new Contact({
+                                    email: email,
+                                    phone: phone,
+                                    linkedId:prim2.id,
+                                    linkPrecedend:'secondary',
+                                    createdAt:new Date(),
+                                    updatedAt:new Date(),
+                                    // deletedAt:new Date(),
+                                  });
+                                  Contact.create(contact, (err, doc) => {
+                                    if (err){
+                                        console.log('err',err);
+                                    }
+                                });
+                                Contact.getByParent(prim2.id,(err,result)=>{
+                                    if(err)throw err;
+                                    primaryContactId = prim2.id;
+                                    emails = _.concat(email,_.map(result,'email'));
+                                    phoneNumbers = _.concat(phoneNumbers,_.map(result,'phone'))
+                                    secondaryContactIds = _.concat(secondaryContactIds,_.map(result,'id'))
+                                });
+                            }
+                        }
+
                     }
-                    // send response;
-    
-                    res.status(200).send({data});
+                    const data = {
+                            "contact": {
+                                "primaryContactId":primaryContactId,
+                                "emails": _.uniq(emails),
+                                "phoneNumbers": _.uniq(phoneNumbers),
+                                "secondaryContactIds": _.uniq(secondaryContactIds)
+                            }
+                        }
+                    res.status(200).send(data);
                 }
             })
         }

@@ -62,38 +62,6 @@ Contact.findContact = ({email,phone}, result) => {
   });
 };
 
-Contact.getAll = (title, result) => {
-  let query = "SELECT * FROM Contacts";
-
-  if (title) {
-    query += ` WHERE title LIKE '%${title}%'`;
-  }
-
-  sql.query(query, (err, res) => {
-    if (err) {
-      console.log("error: ", err);
-      result(null, err);
-      return;
-    }
-
-    console.log("Contacts: ", res);
-    result(null, res);
-  });
-};
-
-Contact.getAllPublished = result => {
-  sql.query("SELECT * FROM Contacts WHERE published=true", (err, res) => {
-    if (err) {
-      console.log("error: ", err);
-      result(null, err);
-      return;
-    }
-
-    console.log("Contacts: ", res);
-    result(null, res);
-  });
-};
-
 Contact.updateById = (id, Contact, result) => {
   sql.query(
     "UPDATE Contacts SET linkPrecedend = ?, linkedId = ?, updatedAt = ? WHERE id = ?",
@@ -117,10 +85,10 @@ Contact.updateById = (id, Contact, result) => {
   );
 };
 
-Contact.updateChildSecIds = (Contact, result) => {
+Contact.updateSecToPrimById = (id,primId, result) => {
   sql.query(
-    "UPDATE Contacts SET linkedId = ?, updatedAt = ? WHERE linkedId = ?",
-    [Contact.linkedId, Contact.updatedAt, Contact.id],
+    "UPDATE Contacts SET linkPrecedend = ?, linkedId = ?, updatedAt = ? WHERE id = ? OR linkedId = ?",
+    ['secondary', primId, new Date(), id, id],
     (err, res) => {
       if (err) {
         console.log("error: ", err);
@@ -130,80 +98,37 @@ Contact.updateChildSecIds = (Contact, result) => {
 
       if (res.affectedRows == 0) {
         // not found Contact with the id
-        result({ kind: "not_found" }, null);
+        result(null, []);
         return;
       }
 
       console.log("updated Contact: ", { id: id, ...Contact });
-      result(null, { id: id, ...Contact });
+      result(null, res);
     }
   );
 };
 
-Contact.remove = (id, result) => {
-  sql.query("DELETE FROM Contacts WHERE id = ?", id, (err, res) => {
-    if (err) {
-      console.log("error: ", err);
-      result(null, err);
-      return;
+Contact.getByParent = (id, result) => {
+  sql.query(
+    "Select * FROM Contacts WHERE linkedId = ?",
+    [id],
+    (err, res) => {
+      if (err) {
+        console.log("error: ", err);
+        result(null, err);
+        return;
+      }
+
+      if (res.affectedRows == 0) {
+        // not found Contact with the id
+        result(null, []);
+        return;
+      }
+
+      console.log("updated Contact: ", { id: id, ...Contact });
+      result(null, res);
     }
-
-    if (res.affectedRows == 0) {
-      // not found Contact with the id
-      result({ kind: "not_found" }, null);
-      return;
-    }
-
-    console.log("deleted Contact with id: ", id);
-    result(null, res);
-  });
-};
-
-Contact.removeAll = result => {
-  sql.query("DELETE FROM Contacts", (err, res) => {
-    if (err) {
-      console.log("error: ", err);
-      result(null, err);
-      return;
-    }
-
-    console.log(`deleted ${res.affectedRows} Contacts`);
-    result(null, res);
-  });
+  );
 };
 
 module.exports = Contact;
-
-
-
-
-// 'use strict';
-// const {
-//   Model
-// } = require('sequelize');
-// module.exports = (sequelize, DataTypes) => {
-//   class Contact extends Model {
-//     /**
-//      * Helper method for defining associations.
-//      * This method is not a part of Sequelize lifecycle.
-//      * The `models/index` file will call this method automatically.
-//      */
-//     static associate(models) {
-//       // define association here
-//     }
-//   }
-//   Contact.init({
-//     id: DataTypes.INTEGER,
-//     phone: DataTypes.STRING,
-//     email: DataTypes.STRING,
-//     linkedId: DataTypes.INTEGER,
-//     linkPrecedend: DataTypes.STRING,
-//     createdAt: DataTypes.DATE,
-//     updatedAt: DataTypes.DATE,
-//     deletedAt: DataTypes.DATE
-//   }, {
-//     sequelize,
-//     modelName: 'Contact',
-//   });
-//   return Contact;
-// };
