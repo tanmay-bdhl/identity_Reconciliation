@@ -1,6 +1,6 @@
 module.exports = {
-  HOST: "127.0.0.1",
-  USER: "root",
-  PASSWORD: "password",
-  DB: "database_development"
+  HOST: "sql6.freemysqlhosting.net",
+  USER: "sql6633105",
+  PASSWORD: "exvidSUdcj",
+  DB: "sql6633105"
 };
