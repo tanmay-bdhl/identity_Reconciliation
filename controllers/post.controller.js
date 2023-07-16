@@ -26,7 +26,7 @@ let ctrl = {
                         email: email,
                         phone: phone,
                         linkedId:null,
-                        linkPrecedend:'primary',
+                        linkedPrecedend:'primary',
                         createdAt:new Date(),
                         updatedAt:new Date(),
                         // deletedAt:new Date(),
@@ -60,7 +60,7 @@ let ctrl = {
                     var phoneNumbers = _.map(result,'phone') || [];
                     var primaryContactId;
                     var secondaryContactIds = _.map(result,(doc)=>{
-                        if(doc.linkPrecedend=='secondary')return doc.id;
+                        if(doc.linkedPrecedend=='secondary')return doc.id;
                     }) || [];
 
                     if(prim1==prim2  && prim1){
@@ -110,7 +110,7 @@ let ctrl = {
                                     email: email,
                                     phone: phone,
                                     linkedId:prim1.id,
-                                    linkPrecedend:'secondary',
+                                    linkedPrecedend:'secondary',
                                     createdAt:new Date(),
                                     updatedAt:new Date(),
                                     // deletedAt:new Date(),
@@ -145,7 +145,7 @@ let ctrl = {
                                     email: email,
                                     phone: phone,
                                     linkedId:prim2.id,
-                                    linkPrecedend:'secondary',
+                                    linkedPrecedend:'secondary',
                                     createdAt:new Date(),
                                     updatedAt:new Date(),
                                     // deletedAt:new Date(),

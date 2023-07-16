@@ -5,7 +5,7 @@ const Contact = function(Contact) {
   this.email = Contact.email;
   this.phone = Contact.phone;
   this.linkedId = Contact.linkedId;
-  this.linkPrecedend = Contact.linkPrecedend
+  this.linkedPrecedend = Contact.linkedPrecedend
   this.createdAt = Contact.createdAt,
   this.updatedAt = Contact.updatedAt,
   this.deletedAt = Contact.deletedAt
@@ -64,8 +64,8 @@ Contact.findContact = ({email,phone}, result) => {
 
 Contact.updateById = (id, Contact, result) => {
   sql.query(
-    "UPDATE Contacts SET linkPrecedend = ?, linkedId = ?, updatedAt = ? WHERE id = ?",
-    [Contact.linkPrecedend, Contact.linkedId, Contact.updatedAt, id],
+    "UPDATE Contacts SET linkedPrecedend = ?, linkedId = ?, updatedAt = ? WHERE id = ?",
+    [Contact.linkedPrecedend, Contact.linkedId, Contact.updatedAt, id],
     (err, res) => {
       if (err) {
         console.log("error: ", err);
@@ -87,7 +87,7 @@ Contact.updateById = (id, Contact, result) => {
 
 Contact.updateSecToPrimById = (id,primId, result) => {
   sql.query(
-    "UPDATE Contacts SET linkPrecedend = ?, linkedId = ?, updatedAt = ? WHERE id = ? OR linkedId = ?",
+    "UPDATE Contacts SET linkedPrecedend = ?, linkedId = ?, updatedAt = ? WHERE id = ? OR linkedId = ?",
     ['secondary', primId, new Date(), id, id],
     (err, res) => {
       if (err) {
