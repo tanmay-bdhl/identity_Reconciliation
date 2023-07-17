@@ -44,6 +44,8 @@ Contact.findById = (id, result) => {
 };
 
 Contact.findContact = ({email,phone}, result) => {
+  phone = phone ==='' ? null:phone;
+  email = email ==='' ? null:email;
   sql.query(`SELECT * FROM Contacts WHERE email = '${email}' OR phone = '${phone}'`, (err, res) => {
     if (err) {
       console.log("error: ", err);
@@ -95,15 +97,20 @@ Contact.updateSecToPrimById = (id,primId, result) => {
         result(null, err);
         return;
       }
-
-      if (res.affectedRows == 0) {
-        // not found Contact with the id
-        result(null, []);
-        return;
-      }
-
-      console.log("updated Contact: ", { id: id, ...Contact });
-      result(null, res);
+      sql.query(
+        "Select * FROM Contacts WHERE linkedId = ?",
+        [primId],
+        (err, res) => {
+          if (err) {
+            console.log("error: ", err);
+            result(null, err);
+            return;
+          }
+          
+          result(null, res);
+          return;
+        }
+      );
     }
   );
 };
@@ -118,15 +125,9 @@ Contact.getByParent = (id, result) => {
         result(null, err);
         return;
       }
-
-      if (res.affectedRows == 0) {
-        // not found Contact with the id
-        result(null, []);
-        return;
-      }
-
-      console.log("updated Contact: ", { id: id, ...Contact });
+      
       result(null, res);
+      return;
     }
   );
 };
